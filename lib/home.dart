@@ -19,7 +19,6 @@ class HomeState extends State<Home> {
   static List<Widget> pages = <Widget>[
     ExploreScreen(),
     RecipesScreen(),
-    // TODO: Replace with grocery screen
     GroceryScreen(),
   ];
 
@@ -34,7 +33,7 @@ class HomeState extends State<Home> {
             style: Theme.of(context).textTheme.headline6,
           ),
         ),
-        body: pages[tabManager.selectedTab],
+        body: IndexedStack(children: pages, index: tabManager.selectedTab,),
         bottomNavigationBar: BottomNavigationBar(
           selectedItemColor:
               Theme.of(context).textSelectionTheme.selectionColor,

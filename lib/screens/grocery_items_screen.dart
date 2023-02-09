@@ -3,15 +3,19 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import '../components/components.dart';
 import '../models/models.dart';
 
 class GroceryItemScreen extends StatefulWidget {
   // 1
   final Function(GroceryItem) onCreate;
+
   // 2
   final Function(GroceryItem) onUpdate;
+
   // 3
   final GroceryItem? originalItem;
+
   // 4
   final bool isUpdating;
 
@@ -20,31 +24,329 @@ class GroceryItemScreen extends StatefulWidget {
     required this.onCreate,
     required this.onUpdate,
     this.originalItem,
-  })  : isUpdating = (originalItem != null);
+  }) : isUpdating = (originalItem != null);
 
   @override
   GroceryItemScreenState createState() => GroceryItemScreenState();
 }
 
 class GroceryItemScreenState extends State<GroceryItemScreen> {
+  String name = '';
+  Importance importance = Importance.low;
+  DateTime _dueDate = DateTime.now();
+  TimeOfDay _timeOfDay = TimeOfDay.now();
+  Color _currentColor = Colors.green;
+  int _currentSliderValue = 0;
+
+  final _nameController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final originalItem = widget.originalItem;
+
+    if (originalItem != null) {
+      name = originalItem.name;
+      importance = originalItem.importance;
+      _dueDate = originalItem.date;
+      _timeOfDay = TimeOfDay.fromDateTime(originalItem.date);
+      _currentColor = originalItem.color;
+      _currentSliderValue = originalItem.quantity;
+      _nameController.text = originalItem.name;
+    }
+    _nameController.addListener(() {
+      name = _nameController.text;
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
   // TODO: Add grocery item screen state properties
 
   @override
   Widget build(BuildContext context) {
     // TODO: Add GroceryItemScreen Scaffold
-    return Container(color: Colors.orange);
+    return Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          actions: [
+            IconButton(
+                onPressed: () {
+                  final groceryItem = GroceryItem(
+                      id: widget.originalItem?.id ?? Uuid().v1(),
+                      name: _nameController.text,
+                      importance: importance,
+                      color: _currentColor,
+                      quantity: _currentSliderValue.toInt(),
+                      date: DateTime(_dueDate.year, _dueDate.month,
+                          _dueDate.day, _timeOfDay.hour, _timeOfDay.minute));
+                  if (widget.isUpdating) {
+                    widget.onUpdate(groceryItem);
+                  } else {
+                    widget.onCreate(groceryItem);
+                  }
+                },
+                icon: Icon(Icons.check))
+          ],
+          title: Text(
+            'Grocery Item',
+            style: Theme.of(context).textTheme.headline6!.copyWith(
+                fontFamily: GoogleFonts.lemon().fontFamily,
+                fontWeight: FontWeight.w200),
+          ),
+        ),
+        body: ListView(
+          padding: EdgeInsets.all(16),
+          children: [
+            buildNameField(),
+            buildImportanceField(),
+            buildDateField(),
+            buildTimeField(),
+            buildColorPicker(),
+            buildQuantityField(),
+            GroceryTile(
+              groceryItem: GroceryItem(
+                  id: 'asdf',
+                  name: name,
+                  importance: importance,
+                  color: _currentColor,
+                  quantity: _currentSliderValue.toInt(),
+                  date: DateTime(_dueDate.year, _dueDate.month, _dueDate.day,
+                      _timeOfDay.hour, _timeOfDay.minute)),
+            )
+          ],
+        ));
   }
 
-// TODO: Add buildNameField()
+  Widget buildNameField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Item Name',
+          style: Theme.of(context).textTheme.headline2,
+        ),
+        TextField(
+          cursorColor: _currentColor,
+          controller: _nameController,
+          decoration: InputDecoration(
+            hintText: 'E.g Apples, Banana, 1 Bag of salt',
+            enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: _currentColor)),
+          ),
+        ),
+      ],
+    );
+  }
 
-// TODO: Add buildImportanceField()
+  Widget buildImportanceField() {
+    const textStyle = TextStyle(color: Colors.white);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Importance',
+          style: Theme.of(context).textTheme.headline2,
+        ),
+        Wrap(
+          spacing: 10,
+          children: [
+            ChoiceChip(
+                onSelected: (seleted) {
+                  setState(() {
+                    importance = Importance.low;
+                  });
+                },
+                selectedColor: Colors.black,
+                label: Text(
+                  'low',
+                  style: textStyle,
+                ),
+                selected: importance == Importance.low),
+            ChoiceChip(
+                onSelected: (seleted) {
+                  setState(() {
+                    importance = Importance.medium;
+                  });
+                },
+                selectedColor: Colors.black,
+                label: Text(
+                  'medium',
+                  style: textStyle,
+                ),
+                selected: importance == Importance.medium),
+            ChoiceChip(
+                onSelected: (seleted) {
+                  setState(() {
+                    importance = Importance.high;
+                  });
+                },
+                selectedColor: Colors.black,
+                label: Text(
+                  'high',
+                  style: textStyle,
+                ),
+                selected: importance == Importance.high),
+          ],
+        )
+      ],
+    );
+  }
 
-// TODO: ADD buildDateField()
+  Widget buildDateField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Date',
+              style: Theme.of(context).textTheme.headline2,
+            ),
+            TextButton(
+                onPressed: () async {
+                  final currentDate = DateTime.now();
+                  final dateSelected = await showDatePicker(
+                    context: context,
+                    initialDate: currentDate,
+                    firstDate: currentDate,
+                    lastDate: DateTime(currentDate.year + 5),
+                  );
+                  if (dateSelected != null) {
+                    _dueDate = dateSelected;
+                    setState(() {});
+                  }
+                },
+                child: Text(
+                  'Select',
+                  style: TextStyle(color: _currentColor),
+                )),
+          ],
+        ),
+        Text(DateFormat('yyyy-MM-dd').format(_dueDate))
+      ],
+    );
+  }
 
-// TODO: Add buildTimeField()
+  Widget buildTimeField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Time of date',
+              style: Theme.of(context).textTheme.headline2,
+            ),
+            TextButton(
+                onPressed: () async {
+                  final timeSelected = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.now(),
+                  );
+                  if (timeSelected != null) {
+                    _timeOfDay = timeSelected;
+                    setState(() {});
+                  }
+                },
+                child: Text(
+                  'Select',
+                  style: TextStyle(color: _currentColor),
+                )),
+          ],
+        ),
+        Text(_timeOfDay.format(context))
+      ],
+    );
+  }
 
-// TODO: Add buildColorPicker()
+  Widget buildColorPicker() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Container(
+          width: 10,
+          height: 50,
+          color: _currentColor,
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Color',
+            style: Theme.of(context).textTheme.headline2,
+          ),
+        ),
+        TextButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                      actions: [
+                        TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text('save'))
+                      ],
+                      content: BlockPicker(
+                        pickerColor: _currentColor,
+                        onColorChanged: (color) {
+                          _currentColor = color;
+                          setState(() {});
+                        },
+                      ));
+                },
+              );
+            },
+            child: Text(
+              'Select',
+              style: TextStyle(color: _currentColor),
+            )),
+      ],
+    );
+  }
 
-// TODO: Add buildQuantityField()
-
+  Widget buildQuantityField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              'Quantity',
+              style: Theme.of(context).textTheme.headline2,
+            ),
+            SizedBox(width: 16),
+            Text(
+              _currentSliderValue.toString(),
+              style: Theme.of(context).textTheme.bodyText1,
+            )
+          ],
+        ),
+        Slider(
+            activeColor: _currentColor,
+            inactiveColor: _currentColor.withOpacity(0.5),
+            min: 0,
+            max: 100,
+            divisions: 100,
+            label: _currentSliderValue.toString(),
+            value: _currentSliderValue.toDouble(),
+            onChanged: (double quantity) {
+              _currentSliderValue = quantity.toInt();
+              setState(() {});
+            })
+      ],
+    );
+  }
 }
